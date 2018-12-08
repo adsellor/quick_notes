@@ -1,8 +1,7 @@
 import "dart:io";
 
 import "package:flutter/material.dart";
-import "package:path_provider/path_provider.dart";
-import 'package:firebase_ml_vision/firebase_ml_vision.dart';
+import 'package:mlkit/mlkit.dart';
 import "package:image_picker/image_picker.dart";
 
 class MyHomePage extends StatefulWidget {
@@ -15,30 +14,23 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool _isProccessing = false;
-  String _visionText;
   File _image;
+  List<VisionText> _currentLabels = <VisionText>[];
+
+  FirebaseVisionTextDetector detector = FirebaseVisionTextDetector.instance;
 
   Future<Null> _getImage() async {
-    Directory tempDir = await getTemporaryDirectory();
-    String tempPath = tempDir.path;
     final image = await ImagePicker.pickImage(source: ImageSource.camera);
 
-    final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(image);
-    final TextRecognizer textRecognizer =
-        FirebaseVision.instance.textRecognizer();
-    VisionText visionText = await textRecognizer.processImage(visionImage);
-    for (TextBlock block in visionText.blocks) {
-      final boundingBox = block.boundingBox;
-      final cornerPoints = block.cornerPoints;
-      final String text = block.text;
-      print(boundingBox);
-      print(cornerPoints);
-      print(text);
+    final currentLabels = await detector.detectFromPath(image.path);
+
+    for (VisionText text in currentLabels) {
+      print(text.text);
     }
 
-    print(visionText.text);
     setState(() {
       _image = image;
+      _currentLabels = currentLabels;
     });
   }
 
@@ -51,7 +43,9 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         backgroundColor: Colors.black,
         body: Center(
-          child: Center(child: Image.file(_image)),
+          child: _image == null
+              ? Text("Pick an image ya jerk")
+              : Image.file(_image),
         ));
   }
 }
