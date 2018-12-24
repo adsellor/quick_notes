@@ -3,10 +3,11 @@ import "dart:io";
 import "package:flutter/material.dart";
 import 'package:mlkit/mlkit.dart';
 import "package:image_picker/image_picker.dart";
-import "package:unicorndial/unicorndial.dart";
 import "package:flare_flutter/flare_actor.dart";
 
-import "./notes.dart";
+import "noteCard.dart";
+import 'noteScreen.dart';
+import 'floatingButton.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({Key key}) : super(key: key);
@@ -27,8 +28,8 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _isProccessing = true;
     });
-    final image = await ImagePicker.pickImage(source: source);
 
+    final image = await ImagePicker.pickImage(source: source);
     final currentLabels = await detector.detectFromPath(image.path);
 
     setState(() {
@@ -39,10 +40,30 @@ class _HomePageState extends State<HomePage> {
     _notes["note_$_id"] = currentLabels;
   }
 
-  _getNotes() {
+  List<Widget> _getNotesCard() {
     List<Widget> notes = [];
-    _notes.values.toList().forEach((elem) {
-      return notes.add(Notes(excerpt: elem.first.text));
+    _notes.values.toList().forEach((note) {
+      String noteContent =
+          note.fold('', (prev, element) => prev + '\n' + element.text);
+
+      notes.add(NoteCard(
+        heroTag: note.toString(),
+        excerpt: note.first.text,
+        titleTag: note.first.text,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NoteScreen(
+                    heroTag: note.toString(),
+                    text: noteContent,
+                    title: note.first.text,
+                    titleTag: note.first.text,
+                  ),
+            ),
+          );
+        },
+      ));
     });
     return notes;
   }
@@ -51,23 +72,12 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final orientation = MediaQuery.of(context).orientation;
     return Scaffold(
-        floatingActionButton: UnicornDialer(
-            parentButtonBackground: Colors.pinkAccent,
-            orientation: UnicornOrientation.VERTICAL,
-            parentButton: Icon(Icons.add),
-            childButtons: <UnicornButton>[
-              UnicornButton(
-                  currentButton: FloatingActionButton(
-                      mini: true,
-                      child: Icon(Icons.photo),
-                      onPressed: () => _getImage(ImageSource.gallery))),
-              UnicornButton(
-                  currentButton: FloatingActionButton(
-                mini: true,
-                child: Icon(Icons.camera),
-                onPressed: () => _getImage(ImageSource.camera),
-              ))
-            ]),
+        floatingActionButton: FloatingActionButton(
+          tooltip: 'Scan from camera',
+          child: Icon(Icons.camera),
+          onPressed: () => _getImage(ImageSource.camera),
+          // onPhotoPressed: () => _getImage(ImageSource.gallery),
+        ),
         backgroundColor: Colors.black,
         body: Container(
           child: Stack(children: <Widget>[
@@ -111,7 +121,7 @@ class _HomePageState extends State<HomePage> {
                               crossAxisSpacing: 5,
                               mainAxisSpacing: 10,
                               crossAxisCount: 2,
-                              children: _getNotes(),
+                              children: _getNotesCard(),
                             )),
               ),
             )
